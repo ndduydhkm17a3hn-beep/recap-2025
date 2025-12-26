@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>The Grimoire 2025: Eternal Edition</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-bg: #030303;
+            --color-gold: #d4af37;
+            --color-crimson: #4a0404;
+            --color-paper: #f0e6d2;
+            --font-main: 'Playfair Display', serif;
+            --font-deco: 'Cinzel', serif;
+            --font-script: 'Great Vibes', cursive;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: var(--color-bg);
+            font-family: var(--font-main);
+            color: white;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* --- POST PROCESSING OVERLAYS --- */
+        #viewport {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
+        }
+
+        #vignette-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.8) 80%, black 100%);
+            pointer-events: none; z-index: 10;
+        }
+
+        #grain-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none; z-index: 11;
+            mix-blend-mode: overlay;
+        }
+
+        /* --- UI SYSTEM --- */
+        #ui-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 50; pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between;
+        }
+
+        /* Loading Screen */
+        #loader-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #020202; z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 1.5s cubic-bezier(0.65, 0, 0.35, 1);
+        }
+
+        .loader-circle {
+            width: 80px; height: 80px;
+            border: 2px solid rgba(212, 175, 55, 0.1);
+            border-top: 2px solid var(--color-gold);
+            border-bottom: 2px solid var(--color-gold);
+            border-radius: 50%;
+            animation: rotate 2s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .loader-text {
+            font-family: var(--font-deco);
+            color: var(--color-gold);
+            letter-spacing: 5px;
+            font-size: 14px;
+            text-transform: uppercase;
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        .loader-status {
+            margin-top: 10px;
+            font-size: 10px; color: #666;
+            font-family: monospace;
+        }
+
+        /* Lock Screen */
+        #lock-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 5, 5, 0.96);
+            z-index: 8000;
+            display: flex; justify-content: center; align-items: center;
+            transition: opacity 1.5s ease;
+        }
+        #lock-canvas { position: absolute; width: 100%; height: 100%; }
+        .lock-hint {
+            position: absolute; top: 20%;
+            color: var(--color-gold);
+            font-family: var(--font-deco);
+            font-size: 16px; letter-spacing: 8px;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+        }
+
+        /* Subtitles */
+        .subtitle-container {
+            position: absolute; bottom: 15%; width: 100%;
+            display: flex; justify-content: center;
+        }
+        .subtitle-text {
+            font-family: var(--font-script);
+            font-size: 42px; color: #fff;
+            text-shadow: 0 4px 10px #000;
+            background: linear-gradient(90deg, transparent, rgba(0,0,0,0.8) 20%, rgba(0,0,0,0.8) 80%, transparent);
+            padding: 15px 100px;
+            border-top: 1px solid rgba(212, 175, 55, 0.3);
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+            transform: translateY(30px); opacity: 0;
+            transition: all 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .subtitle-text.visible { transform: translateY(0); opacity: 1; }
+
+        /* Debug/Webcam */
+        #webcam-preview {
+            position: fixed; bottom: 20px; left: 20px;
+            width: 140px; height: 105px;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 4px; opacity: 0.3;
+            transform: scaleX(-1);
+            transition: opacity 0.3s;
+            z-index: 100;
+        }
+        #webcam-preview:hover { opacity: 1; }
+        #hidden-video { display: none; }
+
+        @keyframes rotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+    </style>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3",
+                "@tweenjs/tween.js": "https://unpkg.com/@tweenjs/tween.js@23.1.1/dist/tween.esm.js"
+            }
+        }
+    </script>
+</head>
+<body>
+    <audio id="bg-music" src="music.mp3" loop crossorigin="anonymous"></audio>
+
+    <div id="loader-screen">
+        <div class="loader-circle"></div>
+        <div class="loader-text">Initializing Grimoire Engine</div>
+        <div class="loader-status" id="loader-status">Connecting to Neural Network...</div>
+    </div>
+
+    <div id="lock-screen">
+        <canvas id="lock-canvas"></canvas>
+        <div class="lock-hint">DRAW 'N' TO UNLOCK MEMORIES</div>
+    </div>
+
+    <div id="vignette-overlay"></div>
+    <div id="grain-overlay"></div>
+    
+    <video id="hidden-video" autoplay playsinline muted></video>
+    <canvas id="webcam-preview"></canvas>
+
+    <div id="ui-layer">
+        <div></div> <div class="subtitle-container">
+            <div id="dynamic-subtitle" class="subtitle-text"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        /**
+         * ------------------------------------------------------------------
+         * THE GRIMOIRE ENGINE v2.5.0 (Eternal Edition)
+         * Architecture: Module Pattern / Component-Based
+         * ------------------------------------------------------------------
+         */
+
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+        import { FilesetResolver, HandLandmarker } from "@mediapipe/tasks-vision";
+        import TWEEN from '@tweenjs/tween.js';
+
+        // ==================================================================
+        // 1. CONFIGURATION & CONSTANTS
+        // ==================================================================
+        const CONFIG = {
+            System: {
+                debug: false,
+                quality: 'high', // 'low', 'medium', 'high'
+                pixelRatio: Math.min(window.devicePixelRatio, 2)
+            },
+            Colors: {
+                background: 0x020202,
+                gold: 0xd4af37,
+                goldDim: 0x8a7224,
+                crimson: 0x4a0404,
+                paper: 0xfffcf5,
+                paperDim: 0xe0d8c8,
+                ambient: 0x404040,
+                spotlight: 0xffaa00
+            },
+            Dimensions: {
+                bookWidth: 4.5,
+                bookHeight: 6.4,
+                pageThickness: 0.025,
+                pageSegments: 50
+            },
+            Camera: {
+                fov: 35,
+                near: 0.1,
+                far: 100,
+                initialPos: new THREE.Vector3(0, 8, 20),
+                readingPos: new THREE.Vector3(0, 5, 13),
+                gridPos: new THREE.Vector3(0, 3, 22)
+            },
+            Animation: {
+                flipDuration: 1600, // ms
+                pageDwell: 4000,    // ms
+                photoSpawnInterval: 250,
+                photoFlyTime: 1200
+            }
+        };
+
+        const DATA_SOURCE = [
+            { id: 1,  month: "JAN", title: "Khởi Đầu",    lyrics: "Tháng Giêng rực rỡ, nắng ấm ngập tràn." },
+            { id: 2,  month: "FEB", title: "Yêu Thương",  lyrics: "Những ngày tháng Hai ngọt ngào kỷ niệm." },
+            { id: 3,  month: "MAR", title: "Tuổi Trẻ",    lyrics: "Tháng Ba nhiệt huyết, những chuyến đi xa." },
+            { id: 4,  month: "APR", title: "Nụ Cười",     lyrics: "Tháng Tư về, gió hát khúc tình ca." },
+            { id: 5,  month: "MAY", title: "Rực Rỡ",      lyrics: "Tháng Năm hoa phượng đỏ rực góc trời." },
+            { id: 6,  month: "JUN", title: "Mưa Hạ",      lyrics: "Cơn mưa rào, nỗi nhớ không tên." },
+            { id: 7,  month: "JUL", title: "Hoài Niệm",   lyrics: "Tháng Bảy trầm mặc, ký ức ùa về." },
+            { id: 8,  month: "AUG", title: "Thu Sang",    lyrics: "Tháng Tám thu sang, lá vàng rơi nhẹ." },
+            { id: 9,  month: "SEP", title: "Ước Mơ",      lyrics: "Mùa thu đi học, tương lai rộng mở." },
+            { id: 10, month: "OCT", title: "Gió Lạnh",    lyrics: "Tháng Mười se lạnh, vòng tay ai ấm." },
+            { id: 11, month: "NOV", title: "Bếp Lửa",     lyrics: "Gió đông bắc về, hơi ấm gia đình." },
+            { id: 12, month: "DEC", title: "Trọn Vẹn",    lyrics: "Tháng Mười Hai, khép lại hành trình." }
+        ];
+
+        // ==================================================================
+        // 2. SHADER STORE (GLSL CODE)
+        // ==================================================================
+        const SHADERS = {
+            // Advanced Paper Shader with Non-linear Bending & Lighting
+            Page: {
+                vertex: `
+                    uniform float uAngle;
+                    varying vec2 vUv;
+                    varying float vLighting;
+                    varying vec3 vPos;
+
+                    void main() {
+                        vUv = uv;
+                        vec3 pos = position;
+
+                        // Calculate Bending Logic
+                        float angleNorm = abs(uAngle) / 3.14159;
+                        float bendAmount = sin(angleNorm * 3.14159) * 2.8; // Max bend height
+                        
+                        // Non-linear curvature based on distance from spine (x=0)
+                        // Starts flat near spine (0.2), curves outward
+                        float dist = max(0.0, pos.x - 0.2); 
+                        float zOffset = pow(dist / 4.0, 2.2) * bendAmount;
+                        
+                        pos.z += zOffset;
+
+                        // Fake Ambient Occlusion based on curvature
+                        vLighting = 1.0 - (bendAmount * 0.15 * (pos.x / 4.5));
+
+                        vPos = pos;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+                    }
+                `,
+                fragment: `
+                    uniform sampler2D uMap;
+                    uniform float uRoughness;
+                    varying vec2 vUv;
+                    varying float vLighting;
+                    varying vec3 vPos;
+
+                    // Pseudo-random function for noise
+                    float random(vec2 st) {
+                        return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+                    }
+
+                    void main() {
+                        vec4 texColor = texture2D(uMap, vUv);
+                        
+                        // Vignette Effect (Darker edges)
+                        float dist = distance(vUv, vec2(0.5));
+                        float vignette = smoothstep(1.2, 0.25, dist);
+
+                        // Paper Grain Noise
+                        float grain = random(vUv * 100.0) * 0.03;
+                        
+                        // Combine lighting, texture, vignette, and grain
+                        vec3 finalColor = texColor.rgb * vLighting * vignette;
+                        finalColor += vec3(grain);
+
+                        // Warm Tint applied to shadows
+                        finalColor = mix(finalColor, vec3(0.5, 0.4, 0.3), 1.0 - vLighting);
+
+                        gl_FragColor = vec4(finalColor, 1.0);
+                    }
+                `
+            },
+
+            // Audio-Reactive Particle Shader
+            Dust: {
+                vertex: `
+                    uniform float uTime;
+                    uniform float uAudioLevel;
+                    attribute float aRandom;
+                    attribute float aSize;
+                    varying float vAlpha;
+
+                    void main() {
+                        vec3 pos = position;
+                        
+                        // Organic movement
+                        float waveX = cos(uTime * 0.5 + aRandom * 10.0);
+                        float waveY = sin(uTime * 0.3 + aRandom * 5.0);
+                        
+                        pos.x += waveX * 0.2;
+                        pos.y += waveY * 0.2;
+
+                        // Audio Reactivity: Particles jump up
+                        pos.y += uAudioLevel * aRandom * 2.5;
+
+                        vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+                        gl_Position = projectionMatrix * mvPosition;
+
+                        // Size attenuation
+                        gl_PointSize = (4.0 * aSize + uAudioLevel * 4.0) * (15.0 / -mvPosition.z);
+                        
+                        // Twinkle effect
+                        vAlpha = 0.4 + 0.6 * sin(uTime * 3.0 + aRandom * 100.0);
+                    }
+                `,
+                fragment: `
+                    uniform vec3 uColor;
+                    varying float vAlpha;
+
+                    void main() {
+                        // Soft circle shape
+                        vec2 uv = gl_PointCoord - vec2(0.5);
+                        float dist = length(uv);
+                        if (dist > 0.5) discard;
+
+                        // Glow gradient
+                        float glow = 1.0 - (dist * 2.0);
+                        glow = pow(glow, 2.0);
+
+                        gl_FragColor = vec4(uColor, vAlpha * glow);
+                    }
+                `
+            }
+        };
+
+        // ==================================================================
+        // 3. UTILITY CLASSES (MATH & HELPERS)
+        // ==================================================================
+        class Utils {
+            static rand(min, max) { return Math.random() * (max - min) + min; }
+            
+            static loadImage(url) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.crossOrigin = "anonymous";
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                    img.src = url;
+                });
+            }
+
+            static createStatus(text) {
+                const el = document.getElementById('loader-status');
+                if(el) el.innerText = text;
+            }
+        }
+
+        // ==================================================================
+        // 4. TEXTURE GENERATOR (PROCEDURAL ART)
+        // ==================================================================
+        class TextureFactory {
+            constructor() {
+                this.canvas = document.createElement('canvas');
+                this.canvas.width = 1024;
+                this.canvas.height = 1450; // A4 Ratio approx
+                this.ctx = this.canvas.getContext('2d');
+            }
+
+            generatePage(monthData, index) {
+                const { ctx, canvas } = this;
+                const w = canvas.width;
+                const h = canvas.height;
+
+                // 1. Clear & Background (Creamy Paper)
+                ctx.fillStyle = "#fffcf5";
+                ctx.fillRect(0, 0, w, h);
+
+                // 2. Add Noise/Texture
+                for (let i = 0; i < 5000; i++) {
+                    ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.02})`;
+                    ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2);
+                }
+
+                // 3. Draw Ornate Border
+                ctx.strokeStyle = "#d4af37";
+                ctx.lineWidth = 12;
+                ctx.strokeRect(50, 50, w - 100, h - 100);
+                
+                ctx.lineWidth = 3;
+                ctx.strokeRect(70, 70, w - 140, h - 140);
+
+                // Corner Decors
+                this.drawCorner(ctx, 50, 50, 0);
+                this.drawCorner(ctx, w-50, 50, Math.PI/2);
+                this.drawCorner(ctx, w-50, h-50, Math.PI);
+                this.drawCorner(ctx, 50, h-50, -Math.PI/2);
+
+                // 4. Main Typography
+                // Month Title (Dark Crimson Ink)
+                ctx.fillStyle = "#4a0404"; 
+                ctx.font = "bold 180px 'Playfair Display'";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(monthData.month, w / 2, h * 0.35);
+
+                // Decorative Line
+                ctx.beginPath();
+                ctx.moveTo(w/2 - 150, h * 0.42);
+                ctx.lineTo(w/2 + 150, h * 0.42);
+                ctx.strokeStyle = "#4a0404";
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                // Subtitle
+                ctx.fillStyle = "#222";
+                ctx.font = "italic 80px 'Cinzel'";
+                ctx.fillText(monthData.title, w / 2, h * 0.5);
+
+                // 5. Watermark Number
+                ctx.save();
+                ctx.translate(w / 2, h * 0.8);
+                ctx.rotate(-0.1);
+                ctx.fillStyle = "rgba(0,0,0,0.03)";
+                ctx.font = "600px 'Times New Roman'";
+                ctx.fillText(index + 1, 0, 0);
+                ctx.restore();
+
+                // Create Texture
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.colorSpace = THREE.SRGBColorSpace;
+                texture.anisotropy = 16;
+                return texture;
+            }
+
+            drawCorner(ctx, x, y, rot) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(rot);
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(60, 0);
+                ctx.lineTo(0, 60);
+                ctx.closePath();
+                ctx.fillStyle = "#d4af37";
+                ctx.fill();
+                ctx.restore();
+            }
+
+            createPolaroid(text) {
+                // Resize Canvas for Polaroid
+                const pCanvas = document.createElement('canvas');
+                pCanvas.width = 256; pCanvas.height = 320;
+                const pCtx = pCanvas.getContext('2d');
+
+                // White Frame
+                pCtx.fillStyle = "#ffffff";
+                pCtx.fillRect(0, 0, 256, 320);
+
+                // Dark Inner
+                pCtx.fillStyle = "#1a1a1a";
+                pCtx.fillRect(15, 15, 226, 226);
+
+                // Placeholder Text
+                pCtx.fillStyle = "#888";
+                pCtx.font = "40px monospace";
+                pCtx.textAlign = "center";
+                pCtx.fillText(text, 128, 130);
+                
+                // Handwritten Note
+                pCtx.fillStyle = "#222";
+                pCtx.font = "24px 'Great Vibes'";
+                pCtx.fillText("Memory 2025", 128, 290);
+
+                return new THREE.CanvasTexture(pCanvas);
+            }
+        }
+
+        // ==================================================================
+        // 5. AUDIO SYSTEM (WEB AUDIO API)
+        // ==================================================================
+        class AudioController {
+            constructor() {
+                this.audio = document.getElementById('bg-music');
+                this.context = null;
+                this.analyser = null;
+                this.dataArray = null;
+                this.volume = 0;
+            }
+
+            init() {
+                if(this.context) return;
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.context = new AudioContext();
+                const src = this.context.createMediaElementSource(this.audio);
+                this.analyser = this.context.createAnalyser();
+                this.analyser.fftSize = 256;
+                src.connect(this.analyser);
+                this.analyser.connect(this.context.destination);
+                this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+            }
+
+            play() {
+                if (this.context && this.context.state === 'suspended') this.context.resume();
+                this.audio.play().catch(e => console.warn("Autoplay blocked"));
+                this.fade(0, 0.8, 2000);
+            }
+
+            fade(from, to, duration) {
+                let start = performance.now();
+                const loop = (now) => {
+                    let progress = (now - start) / duration;
+                    if (progress > 1) progress = 1;
+                    this.audio.volume = from + (to - from) * progress;
+                    if (progress < 1) requestAnimationFrame(loop);
+                };
+                requestAnimationFrame(loop);
+            }
+
+            getLevel() {
+                if (!this.analyser) return 0;
+                this.analyser.getByteFrequencyData(this.dataArray);
+                let sum = 0;
+                for(let i=0; i<this.dataArray.length; i++) sum += this.dataArray[i];
+                return sum / this.dataArray.length; // 0-255
+            }
+        }
+
+        // ==================================================================
+        // 6. SCENE OBJECTS (BOOK, PAGE, PARTICLES)
+        // ==================================================================
+        class Page {
+            constructor(index, textureFactory) {
+                this.index = index;
+                this.group = new THREE.Group();
+                
+                // Z-Order: Higher index = Lower Z (Stack effect)
+                // Correct Z-Order: Index 0 (Jan) on Top, Index 11 (Dec) on Bottom
+                // We stack them downwards from Z=0
+                this.group.position.z = (11 - index) * CONFIG.Dimensions.pageThickness;
+
+                const geometry = new THREE.PlaneGeometry(
+                    CONFIG.Dimensions.bookWidth,
+                    CONFIG.Dimensions.bookHeight,
+                    CONFIG.Dimensions.pageSegments,
+                    CONFIG.Dimensions.pageSegments
+                );
+
+                const texture = textureFactory.generatePage(DATA_SOURCE[index], index);
+
+                this.material = new THREE.ShaderMaterial({
+                    uniforms: {
+                        uAngle: { value: 0 },
+                        uMap: { value: texture },
+                        uRoughness: { value: 0.5 }
+                    },
+                    vertexShader: SHADERS.Page.vertex,
+                    fragmentShader: SHADERS.Page.fragment,
+                    side: THREE.DoubleSide
+                });
+
+                this.mesh = new THREE.Mesh(geometry, this.material);
+                // Shift mesh pivot to the left edge (spine)
+                this.mesh.position.x = CONFIG.Dimensions.bookWidth / 2;
+                this.mesh.castShadow = true;
+                this.mesh.receiveShadow = true;
+
+                this.group.add(this.mesh);
+                
+                // State
+                this.currentAngle = 0;
+                this.targetAngle = 0;
+            }
+
+            update() {
+                // Smooth interpolation for physics-like flip
+                this.currentAngle += (this.targetAngle - this.currentAngle) * 0.08;
+                this.group.rotation.y = this.currentAngle;
+                this.material.uniforms.uAngle.value = this.currentAngle;
+            }
+
+            flip() {
+                // Tweening handled by main controller, but setting target here
+                this.targetAngle = -Math.PI * 0.85;
+            }
+        }
+
+        class Book {
+    constructor(scene, texFactory) {
+        this.scene = scene;
+        this.wrapper = new THREE.Group();
+        this.pages = [];
+        this.texFactory = texFactory;
+        this.init();
+    }
+
+    init() {
+        // ... (Phần tạo Pages giữ nguyên)
+        for (let i = 0; i < 12; i++) {
+            const page = new Page(i, this.texFactory);
+            this.pages.push(page);
+            this.wrapper.add(page.group);
+        }
+
+        // ... (Phần tạo Back Cover giữ nguyên)
+        const coverGeo = new THREE.BoxGeometry(
+            CONFIG.Dimensions.bookWidth + 0.4,
+            CONFIG.Dimensions.bookHeight + 0.4,
+            0.2
+        );
+        const coverMat = new THREE.MeshStandardMaterial({ 
+            color: 0x2a0505, 
+            roughness: 0.6 
+        });
+        const backCover = new THREE.Mesh(coverGeo, coverMat);
+        backCover.position.set(CONFIG.Dimensions.bookWidth/2, 0, -0.2);
+        backCover.receiveShadow = true;
+        this.wrapper.add(backCover);
+
+        // ... (Phần tạo Spine giữ nguyên)
+        const spineGeo = new THREE.CylinderGeometry(0.25, 0.25, CONFIG.Dimensions.bookHeight + 0.4, 32, 1, false, 0, Math.PI);
+        const spine = new THREE.Mesh(spineGeo, coverMat);
+        spine.rotation.z = Math.PI/2;
+        spine.rotation.x = Math.PI/2;
+        spine.position.set(-0.2, 0, 0.15); 
+        // --- PHẦN CHỈNH SỬA VỊ TRÍ ---
+        
+        // ... (các dòng rotation giữ nguyên)
+        
+        // 1. Căn giữa cơ bản (đây là vị trí tâm màn hình)
+        const centerPos = -CONFIG.Dimensions.bookWidth / 2;
+
+        // 2. ĐẨY SANG TRÁI (Trục X)
+        // Trừ thêm một số (ví dụ -3) để dịch sang trái
+        // Số càng lớn (theo chiều âm) thì càng lệch trái xa
+        this.wrapper.position.x = centerPos + 3.5; 
+
+        // 3. Giữ độ cao (như bạn đã chỉnh ở bước trước)
+        this.wrapper.position.y = 4;    
+
+        this.scene.add(this.wrapper);
+    }
+
+    update() {
+        this.pages.forEach(p => p.update());
+    }
+
+    hide() {
+        new TWEEN.Tween(this.wrapper.scale)
+            .to({ x: 0, y: 0, z: 0 }, 1500)
+            .easing(TWEEN.Easing.Back.In)
+            .onComplete(() => { this.wrapper.visible = false; })
+            .start();
+    }
+}
+
+        class MagicParticles {
+            constructor(scene) {
+                this.scene = scene;
+                this.mesh = null;
+                this.init();
+            }
+
+            init() {
+                const count = 1200;
+                const pos = [], randoms = [], sizes = [];
+                for(let i=0; i<count; i++) {
+                    pos.push((Math.random()-0.5)*30, (Math.random()-0.5)*20, (Math.random()-0.5)*20);
+                    randoms.push(Math.random());
+                    sizes.push(Math.random());
+                }
+
+                const geo = new THREE.BufferGeometry();
+                geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+                geo.setAttribute('aRandom', new THREE.Float32BufferAttribute(randoms, 1));
+                geo.setAttribute('aSize', new THREE.Float32BufferAttribute(sizes, 1));
+
+                const mat = new THREE.ShaderMaterial({
+                    uniforms: {
+                        uTime: { value: 0 },
+                        uAudioLevel: { value: 0 },
+                        uColor: { value: new THREE.Color(CONFIG.Colors.gold) }
+                    },
+                    vertexShader: SHADERS.Dust.vertex,
+                    fragmentShader: SHADERS.Dust.fragment,
+                    transparent: true,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                });
+
+                this.mesh = new THREE.Points(geo, mat);
+                this.scene.add(this.mesh);
+            }
+
+            update(time, audioLevel) {
+                if (this.mesh) {
+                    this.mesh.material.uniforms.uTime.value = time;
+                    // Normalize audio 0-255 to 0-1
+                    this.mesh.material.uniforms.uAudioLevel.value = audioLevel / 255.0;
+                    this.mesh.rotation.y = time * 0.02;
+                }
+            }
+        }
+
+        class PhotoGallery {
+            constructor(scene, texFactory) {
+                this.scene = scene;
+                this.texFactory = texFactory;
+                this.activeMeshes = [];
+                this.gridGroup = new THREE.Group();
+                this.scene.add(this.gridGroup);
+            }
+
+           spawnPhotos(monthIndex) {
+                // 1. [SỬA KÍCH THƯỚC] Giảm các số trong BoxGeometry
+                // Cũ: (1.6, 2.1, 0.04) -> Mới: (1.0, 1.3, 0.02) (Nhỏ đi khoảng 40%)
+                const geo = new THREE.BoxGeometry(1.0, 1.3, 0.02);
+
+                for (let i = 1; i <= 3; i++) {
+                    const tex = this.texFactory.createPolaroid(`IMG ${i}`);
+                    const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.5 });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    
+                    // Start position: inside book
+                    mesh.position.set(2, 2, 2); 
+                    mesh.castShadow = true;
+                    
+                    this.scene.add(mesh);
+                    this.activeMeshes.push(mesh);
+
+                    // 2. [SỬA KHOẢNG CÁCH NGANG]
+                    // Vì ảnh nhỏ đi, nên giảm khoảng cách giữa các ảnh để chúng không quá xa nhau
+                    // Cũ: 2.2 -> Mới: 1.5
+                    const targetX = (i - 2) * 1.5; 
+
+                    new TWEEN.Tween(mesh.position)
+                        .to({ 
+                            x: targetX, 
+                            y: 6.5, // 3. [SỬA ĐỘ CAO] Tăng số này lên (Cũ: 4 -> Mới: 6.5)
+                            z: 5 
+                        }, CONFIG.Animation.photoFlyTime)
+                        .easing(TWEEN.Easing.Back.Out)
+                        .delay(i * CONFIG.Animation.photoSpawnInterval)
+                        .start();
+                    
+                    new TWEEN.Tween(mesh.rotation)
+                        .to({ z: (Math.random()-0.5) * 0.4 }, CONFIG.Animation.photoFlyTime)
+                        .delay(i * CONFIG.Animation.photoSpawnInterval)
+                        .start();
+                }
+            }
+            
+            clear() {
+                // Drop active photos
+                this.activeMeshes.forEach((mesh, i) => {
+                    new TWEEN.Tween(mesh.position)
+                        .to({ y: -10 }, 1000)
+                        .easing(TWEEN.Easing.Cubic.In)
+                        .delay(i * 100)
+                        .onComplete(() => {
+                            this.scene.remove(mesh);
+                            if(mesh.geometry) mesh.geometry.dispose();
+                        })
+                        .start();
+                });
+                this.activeMeshes = [];
+            }
+
+            createFinalGrid() {
+                DATA_SOURCE.forEach((data, i) => {
+                    const tex = this.texFactory.createPolaroid(data.month);
+                    const mesh = new THREE.Mesh(
+                        new THREE.BoxGeometry(1.8, 2.4, 0.1),
+                        new THREE.MeshStandardMaterial({ map: tex })
+                    );
+
+                    const col = i % 4;
+                    const row = Math.floor(i / 4);
+                    
+                    const x = (col - 1.5) * 2.2;
+                    const y = (1 - row) * 3 + 2;
+
+                    mesh.position.set(0, 0, 0);
+                    mesh.scale.set(0, 0, 0);
+                    this.gridGroup.add(mesh);
+
+                    new TWEEN.Tween(mesh.position)
+                        .to({ x: x, y: y, z: 0 }, 1500)
+                        .easing(TWEEN.Easing.Elastic.Out)
+                        .delay(1000 + i * 100)
+                        .start();
+
+                    new TWEEN.Tween(mesh.scale)
+                        .to({ x: 1, y: 1, z: 1 }, 1500)
+                        .easing(TWEEN.Easing.Elastic.Out)
+                        .delay(1000 + i * 100)
+                        .start();
+                });
+            }
+        }
+
+        // ==================================================================
+        // 7. INPUT SYSTEM (HAND TRACKING + MAGIC LOCK)
+        // ==================================================================
+        class InputController {
+            constructor(onUnlockCallback) {
+                this.canvas = document.getElementById('lock-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.video = document.getElementById('hidden-video');
+                this.previewCanvas = document.getElementById('webcam-preview');
+                this.previewCtx = this.previewCanvas.getContext('2d');
+                
+                this.onUnlock = onUnlockCallback;
+                this.isLocked = true;
+                
+                // "N" Shape Pattern
+                this.points = [
+                    {x:0.3, y:0.75}, {x:0.3, y:0.25}, 
+                    {x:0.7, y:0.75}, {x:0.7, y:0.25}
+                ];
+                this.checkIndex = 0;
+                this.cursor = { x: 0, y: 0 };
+                this.trail = [];
+                
+                // AI
+                this.landmarker = null;
+                this.initAI();
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+            }
+
+            async initAI() {
+                try {
+                    // 1. Get Camera Stream (Priority)
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    this.video.srcObject = stream;
+                    await this.video.play();
+                    Utils.createStatus("Camera Connected. Loading AI...");
+
+                    // 2. Load Model
+                    const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
+                    this.landmarker = await HandLandmarker.createFromOptions(vision, {
+                        baseOptions: {
+                            modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
+                            delegate: "GPU"
+                        },
+                        runningMode: "VIDEO",
+                        numHands: 1
+                    });
+
+                    Utils.createStatus("System Ready. Draw 'N' to Begin.");
+                    document.getElementById('loader-screen').style.opacity = 0;
+                    setTimeout(() => document.getElementById('loader-screen').remove(), 1000);
+
+                    this.loop();
+                } catch (err) {
+                    alert("Camera Access Denied. Please refresh and allow camera.");
+                    console.error(err);
+                }
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                this.previewCanvas.width = 140;
+                this.previewCanvas.height = 105;
+            }
+
+            loop() {
+                if (this.video.currentTime > 0 && this.landmarker) {
+                    // Detect
+                    const results = this.landmarker.detectForVideo(this.video, performance.now());
+                    
+                    // Draw Preview
+                    this.previewCtx.drawImage(this.video, 0, 0, 140, 105);
+                    if (results.landmarks.length > 0) {
+                        this.previewCtx.fillStyle = "red";
+                        const tip = results.landmarks[0][8];
+                        this.previewCtx.beginPath();
+                        this.previewCtx.arc(tip.x*140, tip.y*105, 5, 0, Math.PI*2);
+                        this.previewCtx.fill();
+                    }
+
+                    // Update Logic
+                    if (this.isLocked) {
+                        this.updateLockLogic(results.landmarks.length > 0 ? results.landmarks[0] : null);
+                    }
+                }
+                requestAnimationFrame(() => this.loop());
+            }
+
+            updateLockLogic(landmarks) {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                if (landmarks) {
+                    const tip = landmarks[8];
+                    const targetX = (1 - tip.x) * this.canvas.width;
+                    const targetY = tip.y * this.canvas.height;
+                    
+                    // Smooth cursor
+                    this.cursor.x += (targetX - this.cursor.x) * 0.3;
+                    this.cursor.y += (targetY - this.cursor.y) * 0.3;
+
+                    // Trail
+                    this.trail.push({x: this.cursor.x, y: this.cursor.y});
+                    if(this.trail.length > 25) this.trail.shift();
+
+                    // Draw Trail
+                    this.ctx.beginPath();
+                    this.ctx.strokeStyle = "#d4af37";
+                    this.ctx.lineWidth = 4;
+                    this.ctx.shadowBlur = 10;
+                    this.ctx.shadowColor = "#d4af37";
+                    this.trail.forEach((p, i) => {
+                        if(i===0) this.ctx.moveTo(p.x, p.y);
+                        else this.ctx.lineTo(p.x, p.y);
+                    });
+                    this.ctx.stroke();
+                    this.ctx.shadowBlur = 0;
+
+                    // Draw Targets
+                    const currentTarget = this.points[this.checkIndex];
+                    const cx = currentTarget.x * this.canvas.width;
+                    const cy = currentTarget.y * this.canvas.height;
+
+                    this.ctx.beginPath();
+                    this.ctx.arc(cx, cy, 20, 0, Math.PI*2);
+                    this.ctx.strokeStyle = `rgba(212, 175, 55, ${0.5 + Math.sin(Date.now()*0.01)*0.3})`;
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+
+                    // Check Distance
+                    if (Math.hypot(this.cursor.x - cx, this.cursor.y - cy) < 60) {
+                        this.checkIndex++;
+                        if (this.checkIndex >= this.points.length) {
+                            this.unlock();
+                        }
+                    }
+                }
+            }
+
+            unlock() {
+                this.isLocked = false;
+                const lockUI = document.getElementById('lock-screen');
+                lockUI.style.opacity = 0;
+                setTimeout(() => {
+                    lockUI.style.display = 'none';
+                    this.onUnlock();
+                }, 1500);
+            }
+        }
+
+        // ==================================================================
+        // 8. MAIN ENGINE (WORLD CONTROLLER)
+        // ==================================================================
+        class Engine {
+            constructor() {
+                this.clock = new THREE.Clock();
+                this.container = document.body;
+                
+                // Components
+                this.texFactory = new TextureFactory();
+                this.audio = new AudioController();
+                
+                this.initThree();
+                this.initObjects();
+                
+                // Input Controller starts last
+                this.input = new InputController(() => this.startExperience());
+                
+                window.addEventListener('resize', () => this.onResize());
+                this.animate();
+            }
+
+            initThree() {
+                this.scene = new THREE.Scene();
+                this.scene.fog = new THREE.FogExp2(CONFIG.Colors.background, 0.035);
+
+                this.camera = new THREE.PerspectiveCamera(
+                    CONFIG.Camera.fov, 
+                    window.innerWidth / window.innerHeight, 
+                    CONFIG.Camera.near, 
+                    CONFIG.Camera.far
+                );
+                this.camera.position.copy(CONFIG.Camera.initialPos);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(CONFIG.System.pixelRatio);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.container.appendChild(this.renderer.domElement);
+
+                // Lighting
+                const hemi = new THREE.HemisphereLight(0xffffff, 0x000000, 0.6);
+                this.scene.add(hemi);
+
+                const spot = new THREE.SpotLight(CONFIG.Colors.spotlight, 80);
+                spot.position.set(5, 12, 8);
+                spot.castShadow = true;
+                spot.shadow.bias = -0.0001;
+                spot.shadow.mapSize.width = 1024;
+                spot.shadow.mapSize.height = 1024;
+                this.scene.add(spot);
+
+                // Post-Processing
+                const renderPass = new RenderPass(this.scene, this.camera);
+                const bloomPass = new UnrealBloomPass(
+                    new THREE.Vector2(window.innerWidth, window.innerHeight), 
+                    1.5, 0.4, 0.85
+                );
+                bloomPass.strength = 0.5;
+                bloomPass.radius = 0.4;
+
+                this.composer = new EffectComposer(this.renderer);
+                this.composer.addPass(renderPass);
+                this.composer.addPass(bloomPass);
+                this.composer.addPass(new OutputPass());
+            }
+
+            initObjects() {
+                this.book = new Book(this.scene, this.texFactory);
+                this.particles = new MagicParticles(this.scene);
+                this.gallery = new PhotoGallery(this.scene, this.texFactory);
+            }
+
+            startExperience() {
+                // 1. Start Audio
+                this.audio.init();
+                this.audio.play();
+
+                // 2. Camera Move
+                new TWEEN.Tween(this.camera.position)
+                    .to(CONFIG.Camera.readingPos, 2000)
+                    .easing(TWEEN.Easing.Cubic.Out)
+                    .start();
+
+                // 3. Begin Timeline
+                this.playSequence(0);
+            }
+
+            playSequence(index) {
+                if (index >= 12) {
+                    this.finishExperience();
+                    return;
+                }
+
+                // A. Flip Page (using Tween on Page object)
+                const page = this.book.pages[index];
+                if(page) {
+                    new TWEEN.Tween(page)
+                        .to({ targetAngle: -Math.PI * 0.85 }, CONFIG.Animation.flipDuration)
+                        .easing(TWEEN.Easing.Quadratic.InOut)
+                        .start();
+                }
+
+                // B. Subtitle
+                const sub = document.getElementById('dynamic-subtitle');
+                sub.innerText = DATA_SOURCE[index].lyrics;
+                sub.classList.add('visible');
+
+                // C. Spawn Photos
+                setTimeout(() => {
+                    this.gallery.spawnPhotos(index);
+                }, 800);
+
+                // D. Next Step
+                setTimeout(() => {
+                    this.gallery.clear();
+                    sub.classList.remove('visible');
+                    this.playSequence(index + 1);
+                }, CONFIG.Animation.pageDwell);
+            }
+
+            finishExperience() {
+                this.book.hide();
+                
+                // Camera retreat
+                new TWEEN.Tween(this.camera.position)
+                    .to(CONFIG.Camera.gridPos, 2500)
+                    .easing(TWEEN.Easing.Cubic.InOut)
+                    .start();
+
+                setTimeout(() => {
+                    this.gallery.createFinalGrid();
+                }, 1000);
+            }
+
+            onResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.composer.setSize(window.innerWidth, window.innerHeight);
+                if(this.input) this.input.resize();
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                const time = this.clock.getElapsedTime();
+                const audioLevel = this.audio.getLevel();
+
+                TWEEN.update();
+
+                // Update Objects
+                this.book.update();
+                this.particles.update(time, audioLevel);
+
+                // Camera Float
+                this.camera.position.y += Math.sin(time * 0.5) * 0.003;
+
+                this.composer.render();
+            }
+        }
+
+        // ==================================================================
+        // 9. BOOTSTRAP
+        // ==================================================================
+        window.onload = () => {
+            const app = new Engine();
+        };
+
+    </script>
+</body>
+</html>
